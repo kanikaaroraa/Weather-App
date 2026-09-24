@@ -2,7 +2,6 @@
 //  CurrentWeatherResponse.swift
 //  WeatherPeek
 //
-//  Created by kanika on 14/04/25.
 //
 
 import Foundation

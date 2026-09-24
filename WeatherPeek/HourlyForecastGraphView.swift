@@ -2,7 +2,6 @@
 //  HourlyForecastGraphView.swift
 //  WeatherPeek
 //
-//  Created by kanika on 16/04/25.
 //
 
 import SwiftUI
@@ -18,6 +17,20 @@ struct HourlyForecastGraphView: View {
                     x: .value("Time", Date(timeIntervalSince1970: forecast.dt)),
                     y: .value("Temperature", forecast.main.temp)
                 )
+            }
+        }
+        .chartXAxis {
+            AxisMarks { value in
+                AxisGridLine().foregroundStyle(.clear)
+                AxisTick().foregroundStyle(.white.opacity(0.9))
+                AxisValueLabel().foregroundStyle(.white.opacity(0.95))
+            }
+        }
+        .chartYAxis {
+            AxisMarks { value in
+                AxisGridLine().foregroundStyle(.clear)
+                AxisTick().foregroundStyle(.white.opacity(0.9))
+                AxisValueLabel().foregroundStyle(.white.opacity(0.95))
             }
         }
         .frame(height: 150)

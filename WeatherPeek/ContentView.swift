@@ -2,8 +2,6 @@
 //  ContentView.swift
 //  WeatherPeek
 //
-//  Created by kanika on 13/04/25.
-//
 
 import SwiftUI
 import Charts
@@ -128,22 +126,10 @@ struct ContentView: View {
                 }
             }
         }
-        .onAppear {
-            dailyForecasts = [
-                DailyForecast(day: "Sun", icon: "sun.max.fill", high: 36, low: 22),
-                DailyForecast(day: "Mon", icon: "sun.max.fill", high: 37, low: 24),
-                DailyForecast(day: "Tue", icon: "sun.max.fill", high: 38, low: 26),
-                DailyForecast(day: "Wed", icon: "sun.max.fill", high: 40, low: 26),
-                DailyForecast(day: "Thu", icon: "sun.max.fill", high: 41, low: 26),
-                DailyForecast(day: "Fri", icon: "cloud.sun.fill", high: 41, low: 26),
-                DailyForecast(day: "Sat", icon: "sun.max.fill", high: 39, low: 24),
-                DailyForecast(day: "Sun", icon: "sun.max.fill", high: 39, low: 23),
-            ]
-        }
     }
 
     func fetchCoordinates(for city: String) {
-        let apiKey = "9f83635066530dd883d7e2a4aca01bcf" // **REPLACE WITH YOUR ACTUAL API KEY**
+        let apiKey = "9f83635066530dd883d7e2a4aca01bcf"
         let cityEscaped = city.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let urlString = "https://api.openweathermap.org/geo/1.0/direct?q=\(cityEscaped)&limit=1&appid=\(apiKey)"
 
@@ -165,8 +151,10 @@ struct ContentView: View {
                 if let firstResult = decodedResponse.first {
                     let latitude = firstResult.lat
                     let longitude = firstResult.lon
+                    
                     print("Coordinates for \(city): Latitude \(latitude), Longitude \(longitude)")
-                    fetchForecast(latitude: latitude, longitude: longitude) // Call the new forecast function
+                    
+                    fetchForecast(latitude: latitude, longitude: longitude)
                 } else {
                     print("City not found.")
                 }
@@ -180,7 +168,7 @@ struct ContentView: View {
     }
 
     func fetchForecast(latitude: Double, longitude: Double) {
-        let apiKey = "9f83635066530dd883d7e2a4aca01bcf" // **REPLACE WITH YOUR ACTUAL API KEY**
+        let apiKey = "9f83635066530dd883d7e2a4aca01bcf"
         let urlString = "https://api.openweathermap.org/data/2.5/forecast?lat=\(latitude)&lon=\(longitude)&appid=\(apiKey)&units=metric"
 
         print("Forecast API URL: \(urlString)")
@@ -200,7 +188,7 @@ struct ContentView: View {
                 let decodedResponse = try JSONDecoder().decode(ForecastResponse.self, from: data)
                 print("Forecast API Data: \(decodedResponse)")
                 DispatchQueue.main.async {
-                    // Extract hourly data for today (you might need to refine this)
+                    // Extract hourly data for today
                     let now = Date()
                     let timeIntervalForNext24Hours: TimeInterval = 24 * 3600
 
@@ -208,7 +196,7 @@ struct ContentView: View {
                         let itemDate = Date(timeIntervalSince1970: item.dt)
                         return itemDate > now && itemDate < now.addingTimeInterval(timeIntervalForNext24Hours)
                     }
-                    // You might want to update currentWeather from the forecast data as well (e.g., the first item)
+                   
                     if let firstForecast = decodedResponse.list.first {
                         self.currentWeather = CurrentWeatherResponse(
                             weather: firstForecast.weather.map {
@@ -225,6 +213,49 @@ struct ContentView: View {
                             name: decodedResponse.city.name
                         )
                     }
+
+                    // Generate daily forecasts from live API data for today through the next week
+                    let calendar = Calendar.current
+                    let groupedByDay = Dictionary(grouping: decodedResponse.list) { item -> Date in
+                        let date = Date(timeIntervalSince1970: item.dt)
+                        return calendar.startOfDay(for: date)
+                    }
+
+                    // Get dates for today + next 6 days
+                    let today = calendar.startOfDay(for: now)
+                    var days: [Date] = []
+                    for offset in 0...6 {
+                        if let day = calendar.date(byAdding: .day, value: offset, to: today) {
+                            days.append(day)
+                        }
+                    }
+
+                    var dailyArray: [DailyForecast] = []
+
+                    for day in days {
+                        if let forecastsForDay = groupedByDay[day] {
+                            // High and low temps
+                            let highTemp = forecastsForDay.map { $0.main.temp_max }.max() ?? 0
+                            let lowTemp = forecastsForDay.map { $0.main.temp_min }.min() ?? 0
+
+                            // Find the most frequent weather main condition for the day
+                            let conditionCounts = Dictionary(grouping: forecastsForDay, by: { $0.weather.first?.main ?? "" })
+                                .mapValues { $0.count }
+
+                            let mostFrequentCondition = conditionCounts.max { a, b in a.value < b.value }?.key ?? ""
+
+                            let iconName = getWeatherSymbol(for: mostFrequentCondition)
+
+                            let dateFormatter = DateFormatter()
+                            dateFormatter.dateFormat = "E"
+
+                            let dayString = dateFormatter.string(from: day)
+
+                            dailyArray.append(DailyForecast(day: dayString, icon: iconName, high: Int(highTemp), low: Int(lowTemp)))
+                        }
+                    }
+
+                    self.dailyForecasts = dailyArray
                 }
             } catch {
                 print("Error decoding forecast response: \(error)")
@@ -239,7 +270,6 @@ struct ContentView: View {
         }.resume()
     }
 
-    // Removed fetchOneCallWeather
 
     func getWeatherSymbol(for condition: String) -> String {
         switch condition.lowercased() {

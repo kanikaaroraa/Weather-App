@@ -2,7 +2,6 @@
 //  OneCallToCurrentWeatherConverter.swift
 //  WeatherPeek
 //
-//  Created by kanika on 16/04/25.
 //
 
 import Foundation
